@@ -12,6 +12,8 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
 var _Game_pickedWord, _Game_actualWord, _Game_turn, _Game_actualPosition, _Game_validLetterCodes, _Game_userInterface;
 import { MAX_WORD_SIZE, MAX_ATTEMPTS } from "./env.js";
 import { UIChanger } from "./UIChanger.js";
+import { LetterChecker } from "./LetterChecker.js";
+import { CodeTransformer } from "./CodeTransformer.js";
 export class Game {
     constructor(pickedWord) {
         _Game_pickedWord.set(this, void 0);
@@ -20,56 +22,7 @@ export class Game {
         _Game_actualPosition.set(this, void 0);
         _Game_validLetterCodes.set(this, void 0);
         _Game_userInterface.set(this, void 0);
-        this.checkRightLetters = () => {
-            for (let i = 0; i < MAX_WORD_SIZE; i++) {
-                if (__classPrivateFieldGet(this, _Game_pickedWord, "f")[i] == __classPrivateFieldGet(this, _Game_actualWord, "f")[i]) {
-                    __classPrivateFieldGet(this, _Game_userInterface, "f").changeBackgroundPosition(__classPrivateFieldGet(this, _Game_turn, "f"), i, "rightLetter");
-                }
-            }
-        };
-        this.checkMisplacedLetters = () => {
-            let actualLetter = "";
-            let pattern;
-            let numberOfCoincidencesPickedWord = 0;
-            let numberOfCoincidencesActualWord = 0;
-            let differenceOfCoincidences = 0;
-            let isMisplacedLetter = true;
-            for (let i = 0; i < MAX_WORD_SIZE; i++) {
-                isMisplacedLetter = true;
-                actualLetter = __classPrivateFieldGet(this, _Game_actualWord, "f")[i];
-                pattern = new RegExp(actualLetter, "g");
-                numberOfCoincidencesPickedWord = (__classPrivateFieldGet(this, _Game_pickedWord, "f").match(pattern) || []).length;
-                numberOfCoincidencesActualWord = (__classPrivateFieldGet(this, _Game_actualWord, "f").match(pattern) || []).length;
-                differenceOfCoincidences = Math.abs(numberOfCoincidencesActualWord - numberOfCoincidencesPickedWord);
-                if (differenceOfCoincidences == 1) {
-                    for (let j = 0; j < MAX_WORD_SIZE; j++) {
-                        if (__classPrivateFieldGet(this, _Game_pickedWord, "f")[j] == actualLetter) {
-                            isMisplacedLetter = false;
-                            break;
-                        }
-                    }
-                }
-                if (differenceOfCoincidences == 0 && __classPrivateFieldGet(this, _Game_pickedWord, "f")[i] == __classPrivateFieldGet(this, _Game_actualWord, "f")[i]) {
-                    isMisplacedLetter = false;
-                }
-                if (numberOfCoincidencesPickedWord > 0 && isMisplacedLetter)
-                    __classPrivateFieldGet(this, _Game_userInterface, "f").changeBackgroundPosition(__classPrivateFieldGet(this, _Game_turn, "f"), i, "misplacedLetter");
-            }
-        };
-        this.checkWrongLetters = () => {
-            let actualLetter = "";
-            let pattern;
-            let numberOfCoincidencesPickedWord = 0;
-            for (let i = 0; i < MAX_WORD_SIZE; i++) {
-                actualLetter = __classPrivateFieldGet(this, _Game_actualWord, "f")[i];
-                pattern = new RegExp(actualLetter, "g");
-                numberOfCoincidencesPickedWord = (__classPrivateFieldGet(this, _Game_pickedWord, "f").match(pattern) || []).length;
-                if (numberOfCoincidencesPickedWord == 0)
-                    __classPrivateFieldGet(this, _Game_userInterface, "f").changeBackgroundPosition(__classPrivateFieldGet(this, _Game_turn, "f"), i, "wrongLetter");
-            }
-        };
         this.updateAfterANewWord = () => {
-            this.checkRightLetters();
             this.checkMisplacedLetters();
             this.checkWrongLetters();
             __classPrivateFieldSet(this, _Game_turn, __classPrivateFieldGet(this, _Game_turn, "f") + 1, "f");
@@ -120,7 +73,7 @@ export class Game {
         __classPrivateFieldSet(this, _Game_userInterface, i, "f");
     }
     isValidLetter(code) {
-        return __classPrivateFieldGet(this, _Game_validLetterCodes, "f").includes(code) && __classPrivateFieldGet(this, _Game_actualPosition, "f") < MAX_WORD_SIZE;
+        return __classPrivateFieldGet(this, _Game_validLetterCodes, "f").includes(code) && __classPrivateFieldGet(this, _Game_actualWord, "f").length < __classPrivateFieldGet(this, _Game_pickedWord, "f").length;
     }
     isEnterKey(code) {
         return code == "Enter";
@@ -128,18 +81,14 @@ export class Game {
     isBackspaceKey(code) {
         return code == "Backspace";
     }
-    transformCodeToLetter(code) {
-        let letter = "";
-        if (code == "Semicolon")
-            letter = "Ñ";
-        else
-            letter = code.split("y")[1];
-        return letter;
-    }
     newLetter(code) {
+        var _a;
+        if (__classPrivateFieldGet(this, _Game_actualPosition, "f") >= __classPrivateFieldGet(this, _Game_pickedWord, "f").length) {
+            return;
+        }
         let letter = this.transformCodeToLetter(code);
         __classPrivateFieldGet(this, _Game_userInterface, "f").setNewLetter(this.turn, this.actualPosition, letter);
-        __classPrivateFieldSet(this, _Game_actualPosition, __classPrivateFieldGet(this, _Game_actualPosition, "f") + 1, "f");
+        __classPrivateFieldSet(this, _Game_actualPosition, (_a = __classPrivateFieldGet(this, _Game_actualPosition, "f"), _a++, _a), "f");
         __classPrivateFieldSet(this, _Game_actualWord, __classPrivateFieldGet(this, _Game_actualWord, "f") + letter, "f");
     }
     checkWordIsRight() {
@@ -147,10 +96,14 @@ export class Game {
             location.assign("/winner");
         }
     }
-    checkGameIsOver() {
-        if (this.turn == MAX_ATTEMPTS) {
-            location.assign("/loser");
-        }
+    checkWrongLetters() {
+        LetterChecker.checkWrongLetters(__classPrivateFieldGet(this, _Game_actualWord, "f"), __classPrivateFieldGet(this, _Game_pickedWord, "f"), __classPrivateFieldGet(this, _Game_turn, "f"), __classPrivateFieldGet(this, _Game_userInterface, "f"));
+    }
+    checkMisplacedLetters() {
+        LetterChecker.checkMisplacedLetters(__classPrivateFieldGet(this, _Game_actualWord, "f"), __classPrivateFieldGet(this, _Game_pickedWord, "f"), __classPrivateFieldGet(this, _Game_turn, "f"), __classPrivateFieldGet(this, _Game_userInterface, "f"));
+    }
+    transformCodeToLetter(code) {
+        return CodeTransformer.transform(code);
     }
     enterPressed() {
         if (__classPrivateFieldGet(this, _Game_actualWord, "f").length == MAX_WORD_SIZE) {
@@ -159,10 +112,12 @@ export class Game {
             this.updateAfterANewWord();
         }
     }
+    //He cambiado para que al borrar la ultima letra de una palabra y poner otra me deje, antes no se podia
     backspacePressed() {
         if (__classPrivateFieldGet(this, _Game_actualPosition, "f") > 0) {
             __classPrivateFieldSet(this, _Game_actualPosition, __classPrivateFieldGet(this, _Game_actualPosition, "f") - 1, "f");
             __classPrivateFieldGet(this, _Game_userInterface, "f").deleteLetter(__classPrivateFieldGet(this, _Game_turn, "f"), __classPrivateFieldGet(this, _Game_actualPosition, "f"));
+            this.actualWord = this.actualWord.slice(0, this.actualPosition);
         }
     }
     newKeyPressed(code) {
@@ -173,6 +128,12 @@ export class Game {
         if (this.isBackspaceKey(code))
             this.backspacePressed();
         __classPrivateFieldGet(this, _Game_userInterface, "f").changeBackgroundKey(code);
+    }
+    //He hecho que al poner la ultima palabra mal pierdas, que no funcionaba bien
+    checkGameIsOver() {
+        if (this.turn == MAX_ATTEMPTS && this.actualWord != __classPrivateFieldGet(this, _Game_pickedWord, "f")) {
+            location.assign("/loser");
+        }
     }
 }
 _Game_pickedWord = new WeakMap(), _Game_actualWord = new WeakMap(), _Game_turn = new WeakMap(), _Game_actualPosition = new WeakMap(), _Game_validLetterCodes = new WeakMap(), _Game_userInterface = new WeakMap();
